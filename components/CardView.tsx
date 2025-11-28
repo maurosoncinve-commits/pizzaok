@@ -100,17 +100,20 @@ const CardView: React.FC<CardViewProps> = ({ card, customer, onDelete }) => {
     <div className="bg-gray-900 rounded-2xl shadow-lg overflow-hidden border border-gray-700/50 flex flex-col h-full transform hover:scale-[1.02] transition-transform duration-300">
         <div 
             ref={cardRef} 
-            className="p-6 flex-grow bg-gradient-to-br from-gray-800 to-gray-900 rounded-t-2xl"
+            className="p-4 sm:p-6 flex-grow bg-gradient-to-br from-gray-800 to-gray-900 rounded-t-2xl"
         >
-             <div className="flex justify-between items-start">
-                <div className="flex-1 pr-4">
-                    <h3 className="text-2xl font-bold text-white tracking-wide">{customer.name}</h3>
+             {/* Mobile: Stack Vertical (QR Top), Desktop: Row (QR Right) */}
+             <div className="flex flex-col-reverse sm:flex-row justify-between items-center sm:items-start gap-6 sm:gap-0">
+                
+                {/* Left Side (Info) */}
+                <div className="flex-1 w-full text-center sm:text-left sm:pr-4">
+                    <h3 className="text-2xl font-bold text-white tracking-wide break-words">{customer.name}</h3>
                     <p className="text-sm text-gray-400">@{customer.instagram}</p>
                     
                     {isVip ? (
                         <div className="mt-6 space-y-3">
                             <p className="font-semibold text-amber-400 text-sm">{t('benefits')}:</p>
-                            <div className="space-y-3 text-gray-200 text-sm">
+                            <div className="space-y-3 text-gray-200 text-sm flex flex-col items-center sm:items-start">
                                 <div className="flex items-center gap-3"><DiscountIcon className="w-5 h-5 text-red-400" /><span>{t('vipBenefit1')}</span></div>
                                 <div className="flex items-center gap-3"><GiftIcon className="w-5 h-5 text-red-400" /><span>{t('vipBenefit2')}</span></div>
                             </div>
@@ -118,8 +121,10 @@ const CardView: React.FC<CardViewProps> = ({ card, customer, onDelete }) => {
                     ) : (
                         <div className="mt-6">
                             <p className="font-semibold text-amber-400 text-sm mb-2">{t('progress')}:</p>
-                            <span className="text-4xl font-bold text-white">{card.points}</span>
-                            <span className="text-lg text-gray-400"> / {FIDELITY_POINTS_FOR_REWARD} {t('points')}</span>
+                            <div className="flex items-baseline justify-center sm:justify-start gap-2">
+                                <span className="text-4xl font-bold text-white">{card.points}</span>
+                                <span className="text-lg text-gray-400"> / {FIDELITY_POINTS_FOR_REWARD} {t('points')}</span>
+                            </div>
                              <div className="w-full bg-gray-700 rounded-full h-2.5 mt-2">
                                 <div className="bg-amber-400 h-2.5 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
                             </div>
@@ -128,12 +133,13 @@ const CardView: React.FC<CardViewProps> = ({ card, customer, onDelete }) => {
                     )}
                 </div>
                 
-                <div className="text-right flex flex-col items-end flex-shrink-0">
-                    <div className="flex items-center space-x-2">
-                        <PizzaIcon className="h-8 w-8 text-white" />
-                        <span className="text-lg font-semibold">Pizza 'N Gooo</span>
+                {/* Right Side (QR & Logo) */}
+                <div className="flex flex-col items-center sm:items-end flex-shrink-0 w-full sm:w-auto">
+                    <div className="flex items-center justify-center sm:justify-end space-x-2 mb-4 sm:mb-0 w-full">
+                        <PizzaIcon className="h-10 w-10 sm:h-8 sm:w-8 text-white object-contain" />
+                        <span className="text-xl sm:text-lg font-semibold">Pizza 'N Gooo</span>
                     </div>
-                    <div ref={qrcodeRef} className="mt-4 p-1 bg-white rounded-md shadow-lg"></div>
+                    <div ref={qrcodeRef} className="mt-2 p-1 bg-white rounded-md shadow-lg inline-block"></div>
                     <p className="font-mono text-xs text-gray-400 mt-2">{card.id}</p>
                     <p className="text-xs text-gray-500 mt-1">Expires: {formatDate(card.expiresAt, language)}</p>
                 </div>
