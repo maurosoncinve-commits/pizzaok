@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useLocalization } from '../hooks/useLocalization';
-import { NewTransaction, Card, Customer } from '../types';
+import { NewTransaction, Card, Customer, CardType } from '../types';
 import { CameraIcon } from './icons/CameraIcon';
 
 // html5-qrcode is loaded from CDN
@@ -61,10 +61,8 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
     };
 
     const formatAmount = (val: string) => {
-        // Remove non-numeric
         const num = val.replace(/\D/g, '');
         if (!num) return '';
-        // Add dots
         return num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     }
     
@@ -95,41 +93,24 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
 
                 const result = await Tesseract.recognize(
                     file,
-                    'eng', // Receipt numbers are usually readable with English model
+                    'eng',
                     { logger: (m: any) => console.log(m) }
                 );
 
                 const text = result.data.text;
-                console.log("OCR Result:", text);
-                
-                // Try to find the Total. Look for lines with 'Total' or just largest numbers.
-                // Simple regex to find numbers like 100.000 or 100,000 or 100000
-                // This regex looks for numbers at the end of lines which is common for totals
                 const lines = text.split('\n');
-                let foundAmount = 0;
-                
-                // Heuristic: usually "Total" is followed by the amount.
-                // Or look for largest integer found in the text.
                 
                 const numberPattern = /[\d,.]+/g;
                 let maxVal = 0;
 
                 for (const line of lines) {
-                    // Cleanup symbols like Rp
                     const cleanLine = line.replace(/[Rp$]/gi, '');
                     const matches = cleanLine.match(numberPattern);
                     if (matches) {
                         for (const match of matches) {
-                            // Normalize: remove dots and commas to get raw integer. 
-                            // Warning: Indonesian receipts use dot for thousands.
-                            // If we see 100.000 it means 100000. 
-                            // If we see 100,000 it might mean decimal or thousand depending on machine.
-                            // Let's assume Indonesia context: dot is thousand separator.
-                            
                             const normalized = match.replace(/\./g, '').replace(/,/g, '.'); 
                             const val = parseFloat(normalized);
                             
-                            // Basic filter: transaction is likely > 10000 IDR and < 5000000 IDR
                             if (!isNaN(val) && val > 5000 && val < 10000000) {
                                 if (val > maxVal) maxVal = val;
                             }
@@ -151,17 +132,13 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
                 setError(t('receiptError'));
             } finally {
                 setIsScanningReceipt(false);
-                // Reset input
                 e.target.value = '';
             }
         }
     };
     
-    // Effect to manage the scanner's lifecycle based on the `isScanning` state
     useEffect(() => {
-        if (!isScanning) {
-            return;
-        }
+        if (!isScanning) return;
 
         if (typeof Html5Qrcode === 'undefined') {
             setError("QR Scanner library not loaded.");
@@ -175,7 +152,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
             const foundCard = cards.find(c => c.id === decodedText);
             if (foundCard) {
                 handleSelectCard(foundCard);
-                setIsScanning(false); // Stop scanning on success
+                setIsScanning(false);
             } else {
                 setError(t('cardNotFound'));
             }
@@ -194,18 +171,13 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
                 setIsScanning(false);
             });
         
-        // This cleanup function runs when `isScanning` becomes false or the component unmounts
         return () => {
             if (qrCodeScanner && qrCodeScanner.isScanning) {
-                qrCodeScanner.stop()
-                    .catch((err: any) => {
-                        console.warn("Failed to stop QR scanner on cleanup:", err);
-                    });
+                qrCodeScanner.stop().catch((err: any) => console.warn(err));
             }
         };
     }, [isScanning, cards, t, handleSelectCard]);
 
-    // Click outside handler for search results
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -227,11 +199,33 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
             return;
         }
 
+        const numericAmount = parseFloat(amount);
         const transaction: NewTransaction = {
             cardId: selectedCardId,
-            amount: parseFloat(amount),
+            amount: numericAmount,
         };
         onAddTransaction(transaction);
+
+        // WhatsApp Logic
+        const card = cards.find(c => c.id === selectedCardId);
+        const customer = card ? customers.find(cust => cust.id === card.customerId) : undefined;
+
+        if (card && customer) {
+            let message = "";
+            if (card.type === CardType.VIP) {
+                message = `Halo ${customer.name}, ${t('waVipMsg')}`;
+            } else {
+                const newPoints = card.points + (numericAmount >= 75000 ? 1 : 0);
+                message = `Halo ${customer.name}, ${t('waFidelityMsg')} ${newPoints} ${t('pointsMsg')}`;
+            }
+
+            const phone = customer.phone.countryCode.replace('+','') + customer.phone.number.replace(/^0+/, '');
+            const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+            
+            // Small delay to allow state update
+            setTimeout(() => window.open(whatsappUrl, '_blank'), 500);
+        }
+
         setSearchTerm('');
         setSelectedCardId('');
         setAmount('');
@@ -304,10 +298,11 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
                         <button 
                             type="button" 
                             onClick={handleReceiptScanClick}
-                            className={`flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition-colors ${isScanningReceipt ? 'opacity-50 cursor-wait' : ''}`}
+                            className={`flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors flex items-center gap-2 ${isScanningReceipt ? 'opacity-50 cursor-wait' : ''}`}
                             disabled={isScanningReceipt}
                         >
-                            {isScanningReceipt ? '...' : '📷'}
+                            <CameraIcon className="w-5 h-5" />
+                            <span className="hidden sm:inline">{t('camera')}</span>
                         </button>
                         <input 
                             type="file" 

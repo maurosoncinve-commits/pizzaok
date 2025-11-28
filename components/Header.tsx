@@ -3,19 +3,17 @@ import React from 'react';
 import { useLocalization } from '../hooks/useLocalization';
 import { Language } from '../utils/localization';
 import { PizzaIcon } from './icons/PizzaIcon';
-import { SettingsIcon } from './icons/SettingsIcon';
 import { CloudIcon } from './icons/CloudIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
 
 interface HeaderProps {
   onHelpClick?: () => void;
-  onSettingsClick?: () => void;
   onInstallClick?: () => void;
   syncStatus?: 'synced' | 'syncing' | 'error';
   showNotification?: (msg: string) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onHelpClick, onSettingsClick, onInstallClick, syncStatus, showNotification }) => {
+const Header: React.FC<HeaderProps> = ({ onHelpClick, onInstallClick, syncStatus, showNotification }) => {
   const { language, setLanguage, t } = useLocalization();
 
   const handleLanguageChange = (lang: Language) => {
@@ -45,15 +43,6 @@ const Header: React.FC<HeaderProps> = ({ onHelpClick, onSettingsClick, onInstall
           >
              <DownloadIcon className="w-4 h-4" />
              <span className="hidden sm:inline">{t('install')}</span>
-          </button>
-
-          <button
-             onClick={onSettingsClick}
-             className="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/10"
-             aria-label={t('settings')}
-             title={t('settings')}
-          >
-             <SettingsIcon className="w-6 h-6" />
           </button>
 
           <button

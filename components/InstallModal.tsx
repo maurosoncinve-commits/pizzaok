@@ -72,9 +72,15 @@ const InstallModal: React.FC<InstallModalProps> = ({ isOpen, onClose }) => {
              )}
              
              {isIOS && (
-                 <p>
-                    <strong>iOS:</strong> {t('installIOS')}
-                 </p>
+                 <div className="space-y-2">
+                    <p className="font-bold text-white">iPhone / iPad (iOS):</p>
+                    <ol className="list-decimal list-inside space-y-1 text-gray-300">
+                        <li>Tap the <span className="font-bold text-blue-400">Share</span> icon (square with arrow up) in the Safari toolbar.</li>
+                        <li>Scroll down the list of options.</li>
+                        <li>Tap <span className="font-bold text-white">Add to Home Screen</span>.</li>
+                        <li>Tap <span className="font-bold text-white">Add</span> in the top right corner.</li>
+                    </ol>
+                 </div>
              )}
         </div>
       </div>

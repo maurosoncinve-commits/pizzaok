@@ -9,14 +9,12 @@ import CustomerList from './CustomerList';
 import TransactionList from './TransactionList';
 import TransactionForm from './TransactionForm';
 import HelpModal from './HelpModal';
-import SettingsModal from './SettingsModal';
 import InstallModal from './InstallModal';
 
 type View = 'register' | 'customers' | 'transactions' | 'backup';
 
 const Dashboard: React.FC = () => {
   const { t } = useLocalization();
-  // Changed default view to 'register' as requested
   const [view, setView] = useState<View>('register');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
@@ -24,7 +22,6 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState('');
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | undefined>(undefined);
   
@@ -69,7 +66,6 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-    // Initial sync check
     if (api.getSyncUrl()) {
         runSync();
     }
@@ -97,6 +93,22 @@ const Dashboard: React.FC = () => {
     setTransactions(prev => prev.filter(t => !deletedTransactionIds.includes(t.id)));
     showNotification(t('cardDeleted'));
   };
+
+  const handleDeleteCustomer = async (customerId: string) => {
+      setSyncStatus('syncing');
+      await api.deleteCustomer(customerId);
+      setSyncStatus('synced');
+      // Refresh local state without refetching all if possible, but fetchData is safer
+      fetchData();
+      showNotification("Customer Deleted");
+  }
+
+  const handleToggleFee = async (customerId: string, status: boolean) => {
+      setSyncStatus('syncing');
+      await api.updateCustomerFee(customerId, status);
+      setSyncStatus('synced');
+      setCustomers(prev => prev.map(c => c.id === customerId ? { ...c, entryFeePaid: status } : c));
+  }
 
   const handleAddTransaction = async (transaction: NewTransaction) => {
     setSyncStatus('syncing');
@@ -171,7 +183,6 @@ const Dashboard: React.FC = () => {
         }
     };
     reader.readAsText(file);
-    // Reset input so same file can be selected again if needed
     event.target.value = '';
   };
 
@@ -180,7 +191,14 @@ const Dashboard: React.FC = () => {
       case 'register':
         return <CustomerForm onRegister={handleRegisterCustomer} />;
       case 'customers':
-        return <CustomerList customers={customers} cards={cards} loading={loading} onDeleteCard={handleDeleteCard} />;
+        return <CustomerList 
+                    customers={customers} 
+                    cards={cards} 
+                    loading={loading} 
+                    onDeleteCard={handleDeleteCard}
+                    onDeleteCustomer={handleDeleteCustomer}
+                    onToggleFee={handleToggleFee}
+                />;
       case 'transactions':
         return (
           <div>
@@ -239,7 +257,7 @@ const Dashboard: React.FC = () => {
             </div>
           )
       default:
-        return <CustomerList customers={customers} cards={cards} loading={loading} onDeleteCard={handleDeleteCard} />;
+        return <CustomerList customers={customers} cards={cards} loading={loading} onDeleteCard={handleDeleteCard} onDeleteCustomer={handleDeleteCustomer} onToggleFee={handleToggleFee} />;
     }
   };
   
@@ -263,7 +281,6 @@ const Dashboard: React.FC = () => {
     <>
       <Header 
         onHelpClick={() => setIsHelpOpen(true)} 
-        onSettingsClick={() => setIsSettingsOpen(true)}
         onInstallClick={() => setIsInstallModalOpen(true)}
         syncStatus={syncStatus}
         showNotification={showNotification}
@@ -286,11 +303,6 @@ const Dashboard: React.FC = () => {
       </main>
 
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
-      <SettingsModal 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
-        onSave={() => runSync()}
-      />
       <InstallModal isOpen={isInstallModalOpen} onClose={() => setIsInstallModalOpen(false)} />
 
       <style>{`

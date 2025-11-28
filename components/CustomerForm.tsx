@@ -8,14 +8,18 @@ interface CustomerFormProps {
     onRegister: (customer: NewCustomer, cardType: CardType) => void;
 }
 
+const STAFF_LIST = ["Mao", "Pina", "Ayu", "Agung", "Juli", "Staff 1", "Staff 2", "Staff 3", "Staff 4", "Staff 5"];
+
 const CustomerForm: React.FC<CustomerFormProps> = ({ onRegister }) => {
     const { t } = useLocalization();
     const [name, setName] = useState('');
-    const [operatorName, setOperatorName] = useState('');
+    const [operatorName, setOperatorName] = useState(STAFF_LIST[0]);
     const [instagram, setInstagram] = useState('');
     const [countryCode, setCountryCode] = useState('+62');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [cardType, setCardType] = useState<CardType>(CardType.FIDELITY);
+    const [dob, setDob] = useState('');
+    const [entryFeePaid, setEntryFeePaid] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -27,14 +31,18 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ onRegister }) => {
                 number: phoneNumber,
             },
             registeredBy: operatorName,
+            dob: dob ? new Date(dob) : undefined,
+            entryFeePaid: entryFeePaid
         };
         onRegister(newCustomer, cardType);
         // Reset form
         setName('');
-        setOperatorName('');
+        setOperatorName(STAFF_LIST[0]);
         setInstagram('');
         setPhoneNumber('');
         setCardType(CardType.FIDELITY);
+        setDob('');
+        setEntryFeePaid(false);
     };
     
     return (
@@ -43,16 +51,35 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ onRegister }) => {
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                     <label htmlFor="operator" className="block text-sm font-medium text-blue-300 mb-1">{t('operatorName')}</label>
-                    <input type="text" id="operator" value={operatorName} onChange={e => setOperatorName(e.target.value)} required placeholder="Who is registering?" className="w-full bg-gray-700 border border-blue-500/50 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"/>
+                    <select 
+                        id="operator" 
+                        value={operatorName} 
+                        onChange={e => setOperatorName(e.target.value)} 
+                        required 
+                        className="w-full bg-gray-700 border border-blue-500/50 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        {STAFF_LIST.map(staff => (
+                            <option key={staff} value={staff}>{staff}</option>
+                        ))}
+                    </select>
                 </div>
 
                 <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">{t('fullName')}</label>
                     <input type="text" id="name" value={name} onChange={e => setName(e.target.value)} required className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500"/>
                 </div>
+                
+                <div>
+                    <label htmlFor="dob" className="block text-sm font-medium text-gray-300 mb-1">{t('dob')}</label>
+                    <input type="date" id="dob" value={dob} onChange={e => setDob(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500"/>
+                </div>
+
                 <div>
                     <label htmlFor="instagram" className="block text-sm font-medium text-gray-300 mb-1">{t('instagramHandle')}</label>
-                    <input type="text" id="instagram" value={instagram} onChange={e => setInstagram(e.target.value)} required placeholder="username" className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500"/>
+                    <div className="flex">
+                        <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-600 bg-gray-600 text-gray-400">@</span>
+                        <input type="text" id="instagram" value={instagram} onChange={e => setInstagram(e.target.value)} required placeholder="username" className="w-full bg-gray-700 border border-gray-600 rounded-r-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500"/>
+                    </div>
                 </div>
                 <div>
                     <label htmlFor="phone" className="block text-sm font-medium text-gray-300 mb-1">{t('phoneNumber')}</label>
@@ -70,6 +97,18 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ onRegister }) => {
                         <button type="button" onClick={() => setCardType(CardType.VIP)} className={`flex-1 py-3 px-4 rounded-md text-sm font-semibold transition-all ${cardType === CardType.VIP ? 'bg-red-600 text-white shadow-lg scale-105' : 'bg-gray-700 text-white hover:bg-gray-600'}`}>{t('vip')}</button>
                     </div>
                 </div>
+                
+                <div className="flex items-center">
+                    <input 
+                        id="entryFee" 
+                        type="checkbox" 
+                        checked={entryFeePaid} 
+                        onChange={e => setEntryFeePaid(e.target.checked)}
+                        className="w-5 h-5 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-2" 
+                    />
+                    <label htmlFor="entryFee" className="ml-2 text-sm font-medium text-gray-300">{t('entryFee')} - <span className={entryFeePaid ? "text-green-400 font-bold" : "text-red-400"}>{entryFeePaid ? t('paid') : t('unpaid')}</span></label>
+                </div>
+
                 <div className="pt-4">
                     <button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-md hover:shadow-lg">{t('register')}</button>
                 </div>

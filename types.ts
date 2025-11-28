@@ -1,3 +1,4 @@
+
 export enum CardType {
   VIP = 'VIP',
   FIDELITY = 'Fidelity',
@@ -13,6 +14,8 @@ export interface Customer {
   };
   registeredBy?: string; // New field for staff name
   registeredAt: Date;
+  dob?: Date; // Date of Birth
+  entryFeePaid: boolean; // 30.000 IDR Fee status
 }
 
 export interface Card {

@@ -33,7 +33,11 @@ const _getDatabase = async (): Promise<Database> => {
     }
     
     // Re-hydrate dates after fetching from DB, as they are stored as strings
-    db.customers = db.customers.map((c: any) => ({ ...c, registeredAt: new Date(c.registeredAt) }));
+    db.customers = db.customers.map((c: any) => ({ 
+        ...c, 
+        registeredAt: new Date(c.registeredAt),
+        dob: c.dob ? new Date(c.dob) : undefined 
+    }));
     db.cards = db.cards.map((c: any) => ({ ...c, createdAt: new Date(c.createdAt), expiresAt: new Date(c.expiresAt) }));
     db.transactions = db.transactions.map((t: any) => ({ ...t, date: new Date(t.date) }));
 
@@ -94,7 +98,11 @@ export const api = {
             if (data && Array.isArray(data.customers)) {
                  // Valid DB found, overwrite local
                  const db: Database = {
-                    customers: data.customers.map((c: any) => ({ ...c, registeredAt: new Date(c.registeredAt) })),
+                    customers: data.customers.map((c: any) => ({ 
+                        ...c, 
+                        registeredAt: new Date(c.registeredAt),
+                        dob: c.dob ? new Date(c.dob) : undefined
+                    })),
                     cards: data.cards.map((c: any) => ({ ...c, createdAt: new Date(c.createdAt), expiresAt: new Date(c.expiresAt) })),
                     transactions: data.transactions.map((t: any) => ({ ...t, date: new Date(t.date) }))
                 };
@@ -158,6 +166,36 @@ export const api = {
         await _saveDatabase(db);
 
         return { customer, card };
+    },
+
+    updateCustomerFee: async (customerId: string, isPaid: boolean): Promise<Customer> => {
+        const db = await _getDatabase();
+        const customerIndex = db.customers.findIndex(c => c.id === customerId);
+        if (customerIndex === -1) throw new Error('Customer not found');
+
+        db.customers[customerIndex].entryFeePaid = isPaid;
+        await _saveDatabase(db);
+        return db.customers[customerIndex];
+    },
+
+    deleteCustomer: async (customerId: string): Promise<string> => {
+        const db = await _getDatabase();
+        const customerIndex = db.customers.findIndex(c => c.id === customerId);
+        if (customerIndex === -1) throw new Error('Customer not found');
+
+        // Delete Customer
+        db.customers.splice(customerIndex, 1);
+
+        // Delete associated cards
+        const customerCards = db.cards.filter(c => c.customerId === customerId);
+        const cardIdsToDelete = customerCards.map(c => c.id);
+        db.cards = db.cards.filter(c => c.customerId !== customerId);
+
+        // Delete associated transactions
+        db.transactions = db.transactions.filter(t => !cardIdsToDelete.includes(t.cardId));
+
+        await _saveDatabase(db);
+        return customerId;
     },
     
     deleteCard: async (cardId: string): Promise<{ deletedCardId: string, deletedTransactionIds: string[] }> => {
@@ -261,8 +299,8 @@ export const api = {
         }
 
         if (format === 'csv') {
-            const customerHeader = 'customerId,name,instagram,phone,registeredAt,registeredBy\n';
-            const customerRows = customers.map(c => `${c.id},${c.name},${c.instagram},"${c.phone.countryCode} ${c.phone.number}",${c.registeredAt.toISOString()},${c.registeredBy || ''}`).join('\n');
+            const customerHeader = 'customerId,name,instagram,phone,registeredAt,registeredBy,dob,entryFeePaid\n';
+            const customerRows = customers.map(c => `${c.id},${c.name},${c.instagram},"${c.phone.countryCode} ${c.phone.number}",${c.registeredAt.toISOString()},${c.registeredBy || ''},${c.dob ? c.dob.toISOString() : ''},${c.entryFeePaid}`).join('\n');
 
             const cardHeader = '\n\ncardId,customerId,type,points,createdAt\n';
             const cardRows = cards.map(c => `${c.id},${c.customerId},${c.type},${c.points},${c.createdAt.toISOString()}`).join('\n');
@@ -287,7 +325,11 @@ export const api = {
             
             // Re-hydrate dates needed before saving to properly store them as Date objects 
             const db: Database = {
-                customers: data.customers.map((c: any) => ({ ...c, registeredAt: new Date(c.registeredAt) })),
+                customers: data.customers.map((c: any) => ({ 
+                    ...c, 
+                    registeredAt: new Date(c.registeredAt),
+                    dob: c.dob ? new Date(c.dob) : undefined
+                })),
                 cards: data.cards.map((c: any) => ({ ...c, createdAt: new Date(c.createdAt), expiresAt: new Date(c.expiresAt) })),
                 transactions: data.transactions.map((t: any) => ({ ...t, date: new Date(t.date) }))
             };
