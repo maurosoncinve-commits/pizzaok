@@ -247,7 +247,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
             <form onSubmit={handleSubmit} className={`space-y-4 ${isScanning ? 'hidden' : 'block'}`}>
                 <div ref={wrapperRef} className="relative">
                     <label htmlFor="cardId" className="block text-sm font-medium text-gray-300 mb-1">{t('searchByNameOrCardId')}</label>
-                    <div className="flex items-center">
+                    <div className="flex gap-2">
                         <input 
                             type="text" 
                             id="cardId" 
@@ -260,11 +260,16 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
                             onFocus={() => setShowResults(true)}
                             autoComplete="off"
                             required 
-                            className="w-full bg-gray-700 border border-gray-600 rounded-l-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500"
+                            placeholder="Enter name or ID"
+                            className="flex-grow bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500"
                         />
-                         <button type="button" onClick={handleStartScanning} className="bg-gray-600 hover:bg-gray-500 p-2.5 rounded-r-md border border-l-0 border-gray-600 flex items-center gap-2 pr-3">
-                            <CameraIcon className="h-5 w-5 text-white" />
-                            <span className="text-xs text-yellow-400 font-bold whitespace-nowrap hidden sm:inline">{t('scanCardPrompt')}</span>
+                         <button 
+                            type="button" 
+                            onClick={handleStartScanning} 
+                            className="bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white p-2 rounded-md transition-colors flex items-center justify-center gap-2 min-w-[120px]"
+                        >
+                            <CameraIcon className="h-5 w-5" />
+                            <span className="text-xs font-bold">{t('scanCardPrompt')}</span>
                         </button>
                     </div>
                    
@@ -293,19 +298,16 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
                             onChange={handleAmountChange} 
                             required
                             placeholder="0"
-                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500 font-mono text-lg"
+                            className="flex-grow bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500 font-mono text-lg"
                         />
                         <button 
                             type="button" 
                             onClick={handleReceiptScanClick}
-                            className={`flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition-colors flex items-center gap-2 ${isScanningReceipt ? 'opacity-50 cursor-wait' : ''}`}
+                            className={`bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white p-2 rounded-md transition-colors flex items-center justify-center gap-2 min-w-[120px] ${isScanningReceipt ? 'opacity-50 cursor-wait' : ''}`}
                             disabled={isScanningReceipt}
                         >
                             <CameraIcon className="w-5 h-5" />
-                            <div className="flex flex-col items-start leading-tight">
-                                <span className="text-xs font-normal opacity-80">{t('camera')}</span>
-                                <span className="text-xs text-yellow-300 font-bold whitespace-nowrap">{t('scanBillPrompt')}</span>
-                            </div>
+                            <span className="text-xs font-bold">{t('scanBillPrompt')}</span>
                         </button>
                         <input 
                             type="file" 
