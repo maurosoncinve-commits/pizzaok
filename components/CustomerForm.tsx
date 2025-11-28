@@ -13,7 +13,7 @@ const STAFF_LIST = ["Mao", "Pina", "Ayu", "Agung", "Juli", "Staff 1", "Staff 2",
 const CustomerForm: React.FC<CustomerFormProps> = ({ onRegister }) => {
     const { t } = useLocalization();
     const [name, setName] = useState('');
-    const [operatorName, setOperatorName] = useState(STAFF_LIST[0]);
+    const [operatorName, setOperatorName] = useState(''); // Start empty
     const [instagram, setInstagram] = useState('');
     const [countryCode, setCountryCode] = useState('+62');
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -23,6 +23,11 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ onRegister }) => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!operatorName) {
+            alert(t('selectStaff'));
+            return;
+        }
+        
         const newCustomer: NewCustomer = {
             name,
             instagram: instagram.startsWith('@') ? instagram.substring(1) : instagram,
@@ -37,7 +42,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ onRegister }) => {
         onRegister(newCustomer, cardType);
         // Reset form
         setName('');
-        setOperatorName(STAFF_LIST[0]);
+        setOperatorName(''); // Reset to empty
         setInstagram('');
         setPhoneNumber('');
         setCardType(CardType.FIDELITY);
@@ -58,6 +63,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ onRegister }) => {
                         required 
                         className="w-full bg-gray-700 border border-blue-500/50 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
                     >
+                        <option value="" disabled>{t('selectStaff')}</option>
                         {STAFF_LIST.map(staff => (
                             <option key={staff} value={staff}>{staff}</option>
                         ))}

@@ -10,12 +10,16 @@ import TransactionList from './TransactionList';
 import TransactionForm from './TransactionForm';
 import HelpModal from './HelpModal';
 import InstallModal from './InstallModal';
+import HomeDashboard from './HomeDashboard';
+import VoucherGenerator from './VoucherGenerator';
+import { ChartIcon } from './icons/ChartIcon';
+import { TicketIcon } from './icons/TicketIcon';
 
-type View = 'register' | 'customers' | 'transactions' | 'backup';
+type View = 'home' | 'register' | 'customers' | 'transactions' | 'marketing' | 'backup';
 
 const Dashboard: React.FC = () => {
   const { t } = useLocalization();
-  const [view, setView] = useState<View>('register');
+  const [view, setView] = useState<View>('home');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -79,7 +83,7 @@ const Dashboard: React.FC = () => {
   const handleRegisterCustomer = async (customer: NewCustomer, cardType: CardType) => {
     setSyncStatus('syncing');
     await api.addCustomer(customer, cardType);
-    setSyncStatus('synced'); // Optimistic
+    setSyncStatus('synced');
     showNotification(t('customerRegistered'));
     fetchData();
     setView('customers');
@@ -98,7 +102,6 @@ const Dashboard: React.FC = () => {
       setSyncStatus('syncing');
       await api.deleteCustomer(customerId);
       setSyncStatus('synced');
-      // Refresh local state without refetching all if possible, but fetchData is safer
       fetchData();
       showNotification("Customer Deleted");
   }
@@ -188,6 +191,8 @@ const Dashboard: React.FC = () => {
 
   const renderView = () => {
     switch (view) {
+      case 'home':
+        return <HomeDashboard customers={customers} transactions={transactions} />;
       case 'register':
         return <CustomerForm onRegister={handleRegisterCustomer} />;
       case 'customers':
@@ -213,6 +218,8 @@ const Dashboard: React.FC = () => {
             />
           </div>
         );
+      case 'marketing':
+          return <VoucherGenerator />;
       case 'backup':
           return (
             <div className="bg-gray-800/50 p-6 rounded-lg shadow-lg">
@@ -257,23 +264,25 @@ const Dashboard: React.FC = () => {
             </div>
           )
       default:
-        return <CustomerList customers={customers} cards={cards} loading={loading} onDeleteCard={handleDeleteCard} onDeleteCustomer={handleDeleteCustomer} onToggleFee={handleToggleFee} />;
+        return <HomeDashboard customers={customers} transactions={transactions} />;
     }
   };
   
   const NavButton: React.FC<{
     targetView: View;
     children: React.ReactNode;
-  }> = ({ targetView, children }) => (
+    icon?: React.ReactNode;
+  }> = ({ targetView, children, icon }) => (
     <button
       onClick={() => setView(targetView)}
-      className={`px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+      className={`px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2 ${
         view === targetView
           ? 'bg-red-600 text-white shadow-md'
           : 'text-gray-300 hover:bg-gray-700 hover:text-white'
       }`}
     >
-      {children}
+      {icon && icon}
+      <span className="hidden sm:inline">{children}</span>
     </button>
   );
 
@@ -286,10 +295,12 @@ const Dashboard: React.FC = () => {
         showNotification={showNotification}
       />
       <main className="container mx-auto p-4 md:p-8 pb-20">
-        <div className="mb-8 p-2 bg-gray-800/60 rounded-lg shadow-md flex flex-wrap gap-2 justify-center">
+        <div className="mb-8 p-2 bg-gray-800/60 rounded-lg shadow-md flex flex-wrap gap-2 justify-center overflow-x-auto">
+            <NavButton targetView="home" icon={<ChartIcon className="w-4 h-4"/>}>{t('dashboard')}</NavButton>
             <NavButton targetView="register">{t('registerCustomer')}</NavButton>
             <NavButton targetView="customers">{t('customersAndCards')}</NavButton>
             <NavButton targetView="transactions">{t('transactions')}</NavButton>
+            <NavButton targetView="marketing" icon={<TicketIcon className="w-4 h-4"/>}>{t('marketing')}</NavButton>
             <NavButton targetView="backup">{t('backupExport')}</NavButton>
         </div>
         
