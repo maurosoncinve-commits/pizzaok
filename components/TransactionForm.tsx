@@ -1,0 +1,334 @@
+
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useLocalization } from '../hooks/useLocalization';
+import { NewTransaction, Card, Customer } from '../types';
+import { CameraIcon } from './icons/CameraIcon';
+
+// html5-qrcode is loaded from CDN
+declare const Html5Qrcode: any;
+declare const Tesseract: any;
+
+interface TransactionFormProps {
+    cards: Card[];
+    customers: Customer[];
+    onAddTransaction: (transaction: NewTransaction) => void;
+}
+
+const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onAddTransaction }) => {
+    const { t } = useLocalization();
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCardId, setSelectedCardId] = useState('');
+    const [amount, setAmount] = useState('');
+    const [displayAmount, setDisplayAmount] = useState('');
+    const [error, setError] = useState('');
+    const [isScanning, setIsScanning] = useState(false);
+    const [isScanningReceipt, setIsScanningReceipt] = useState(false);
+    const [showResults, setShowResults] = useState(false);
+    const receiptInputRef = useRef<HTMLInputElement>(null);
+    
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    const customerMap = useMemo(() => new Map(customers.map(c => [c.id, c.name])), [customers]);
+
+    const filteredCards = useMemo(() => {
+        if (!searchTerm || selectedCardId) return [];
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        
+        const cardsByName = customers
+            .filter(c => c.name.toLowerCase().includes(lowerSearchTerm))
+            .flatMap(c => cards.filter(card => card.customerId === c.id));
+            
+        const cardsById = cards.filter(c => c.id.toLowerCase().includes(lowerSearchTerm));
+
+        const allFiltered = [...cardsByName, ...cardsById];
+        return Array.from(new Map(allFiltered.map(item => [item.id, item])).values());
+    }, [searchTerm, cards, customers, selectedCardId]);
+
+    const handleSelectCard = useCallback((card: Card) => {
+        setSelectedCardId(card.id);
+        const customerName = customerMap.get(card.customerId) || 'Unknown';
+        setSearchTerm(`${customerName} (${card.id})`);
+        setShowResults(false);
+    }, [customerMap]);
+
+    const handleStartScanning = () => {
+        setError('');
+        setIsScanning(true);
+    };
+
+    const handleStopScanning = () => {
+        setIsScanning(false);
+    };
+
+    const formatAmount = (val: string) => {
+        // Remove non-numeric
+        const num = val.replace(/\D/g, '');
+        if (!num) return '';
+        // Add dots
+        return num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    }
+    
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        const rawValue = val.replace(/\./g, '');
+        
+        if (rawValue === '' || /^\d+$/.test(rawValue)) {
+            setAmount(rawValue);
+            setDisplayAmount(formatAmount(rawValue));
+        }
+    };
+
+    const handleReceiptScanClick = () => {
+        receiptInputRef.current?.click();
+    };
+
+    const handleReceiptFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setIsScanningReceipt(true);
+            setError('');
+            const file = e.target.files[0];
+            
+            try {
+                if (typeof Tesseract === 'undefined') {
+                    throw new Error("OCR Library not loaded");
+                }
+
+                const result = await Tesseract.recognize(
+                    file,
+                    'eng', // Receipt numbers are usually readable with English model
+                    { logger: (m: any) => console.log(m) }
+                );
+
+                const text = result.data.text;
+                console.log("OCR Result:", text);
+                
+                // Try to find the Total. Look for lines with 'Total' or just largest numbers.
+                // Simple regex to find numbers like 100.000 or 100,000 or 100000
+                // This regex looks for numbers at the end of lines which is common for totals
+                const lines = text.split('\n');
+                let foundAmount = 0;
+                
+                // Heuristic: usually "Total" is followed by the amount.
+                // Or look for largest integer found in the text.
+                
+                const numberPattern = /[\d,.]+/g;
+                let maxVal = 0;
+
+                for (const line of lines) {
+                    // Cleanup symbols like Rp
+                    const cleanLine = line.replace(/[Rp$]/gi, '');
+                    const matches = cleanLine.match(numberPattern);
+                    if (matches) {
+                        for (const match of matches) {
+                            // Normalize: remove dots and commas to get raw integer. 
+                            // Warning: Indonesian receipts use dot for thousands.
+                            // If we see 100.000 it means 100000. 
+                            // If we see 100,000 it might mean decimal or thousand depending on machine.
+                            // Let's assume Indonesia context: dot is thousand separator.
+                            
+                            const normalized = match.replace(/\./g, '').replace(/,/g, '.'); 
+                            const val = parseFloat(normalized);
+                            
+                            // Basic filter: transaction is likely > 10000 IDR and < 5000000 IDR
+                            if (!isNaN(val) && val > 5000 && val < 10000000) {
+                                if (val > maxVal) maxVal = val;
+                            }
+                        }
+                    }
+                }
+                
+                if (maxVal > 0) {
+                    const rawString = maxVal.toString();
+                    setAmount(rawString);
+                    setDisplayAmount(formatAmount(rawString));
+                    alert(`${t('receiptTotalFound')} ${formatAmount(rawString)}`);
+                } else {
+                    alert(t('receiptError'));
+                }
+
+            } catch (err) {
+                console.error(err);
+                setError(t('receiptError'));
+            } finally {
+                setIsScanningReceipt(false);
+                // Reset input
+                e.target.value = '';
+            }
+        }
+    };
+    
+    // Effect to manage the scanner's lifecycle based on the `isScanning` state
+    useEffect(() => {
+        if (!isScanning) {
+            return;
+        }
+
+        if (typeof Html5Qrcode === 'undefined') {
+            setError("QR Scanner library not loaded.");
+            setIsScanning(false);
+            return;
+        }
+
+        const qrCodeScanner = new Html5Qrcode("qr-reader");
+
+        const qrCodeSuccessCallback = (decodedText: string) => {
+            const foundCard = cards.find(c => c.id === decodedText);
+            if (foundCard) {
+                handleSelectCard(foundCard);
+                setIsScanning(false); // Stop scanning on success
+            } else {
+                setError(t('cardNotFound'));
+            }
+        };
+        
+        const config = { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 },
+            disableFlip: true,
+        };
+        
+        qrCodeScanner.start({ facingMode: "environment" }, config, qrCodeSuccessCallback)
+            .catch((err: any) => {
+                console.error("QR Code scanner error:", err);
+                setError(t('noCameraPermission'));
+                setIsScanning(false);
+            });
+        
+        // This cleanup function runs when `isScanning` becomes false or the component unmounts
+        return () => {
+            if (qrCodeScanner && qrCodeScanner.isScanning) {
+                qrCodeScanner.stop()
+                    .catch((err: any) => {
+                        console.warn("Failed to stop QR scanner on cleanup:", err);
+                    });
+            }
+        };
+    }, [isScanning, cards, t, handleSelectCard]);
+
+    // Click outside handler for search results
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setShowResults(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [wrapperRef]);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        
+        if (!selectedCardId) {
+            setError(t('cardNotFound'));
+            return;
+        }
+
+        const transaction: NewTransaction = {
+            cardId: selectedCardId,
+            amount: parseFloat(amount),
+        };
+        onAddTransaction(transaction);
+        setSearchTerm('');
+        setSelectedCardId('');
+        setAmount('');
+        setDisplayAmount('');
+    };
+
+    return (
+        <div className="bg-gray-800/50 p-6 md:p-8 rounded-xl shadow-2xl shadow-black/20 max-w-2xl mx-auto mb-8">
+            <h2 className="text-3xl font-bold mb-6 text-yellow-400 border-b-2 border-yellow-400/30 pb-2">{t('addTransaction')}</h2>
+            
+            {isScanning && (
+                <div className="mb-4">
+                    <div id="qr-reader" className="w-full rounded-lg overflow-hidden border-2 border-red-500 bg-gray-900"></div>
+                    <p className="text-center text-sm text-gray-300 mt-2">{t('qrScanning')}</p>
+                    <button onClick={handleStopScanning} className="w-full mt-2 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">{t('stopScanning')}</button>
+                </div>
+            )}
+            
+            <form onSubmit={handleSubmit} className={`space-y-4 ${isScanning ? 'hidden' : 'block'}`}>
+                <div ref={wrapperRef} className="relative">
+                    <label htmlFor="cardId" className="block text-sm font-medium text-gray-300 mb-1">{t('searchByNameOrCardId')}</label>
+                    <div className="flex items-center">
+                        <input 
+                            type="text" 
+                            id="cardId" 
+                            value={searchTerm} 
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                setSelectedCardId('');
+                                setShowResults(true);
+                            }}
+                            onFocus={() => setShowResults(true)}
+                            autoComplete="off"
+                            required 
+                            className="w-full bg-gray-700 border border-gray-600 rounded-l-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500"
+                        />
+                         <button type="button" onClick={handleStartScanning} className="bg-gray-600 hover:bg-gray-500 p-2.5 rounded-r-md border border-l-0 border-gray-600">
+                            <CameraIcon className="h-5 w-5 text-white" />
+                            <span className="sr-only">{t('scanQRCode')}</span>
+                        </button>
+                    </div>
+                   
+                    {showResults && filteredCards.length > 0 && (
+                        <ul className="absolute z-10 w-full mt-1 bg-gray-700 border border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                            {filteredCards.map(card => (
+                                <li 
+                                    key={card.id}
+                                    onClick={() => handleSelectCard(card)}
+                                    className="px-4 py-2 text-white hover:bg-red-600 cursor-pointer"
+                                >
+                                    <span className="font-semibold">{customerMap.get(card.customerId)}</span>
+                                    <span className="text-sm text-gray-300 block">({card.type}) - {card.id}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+                <div>
+                    <label htmlFor="amount" className="block text-sm font-medium text-gray-300 mb-1">{t('transactionAmount')}</label>
+                    <div className="flex gap-2">
+                        <input 
+                            type="text" 
+                            id="amount" 
+                            value={displayAmount} 
+                            onChange={handleAmountChange} 
+                            required
+                            placeholder="0"
+                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500 font-mono text-lg"
+                        />
+                        <button 
+                            type="button" 
+                            onClick={handleReceiptScanClick}
+                            className={`flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition-colors ${isScanningReceipt ? 'opacity-50 cursor-wait' : ''}`}
+                            disabled={isScanningReceipt}
+                        >
+                            {isScanningReceipt ? '...' : '📷'}
+                        </button>
+                        <input 
+                            type="file" 
+                            accept="image/*" 
+                            capture="environment" 
+                            ref={receiptInputRef} 
+                            onChange={handleReceiptFileChange} 
+                            className="hidden" 
+                        />
+                    </div>
+                    {isScanningReceipt && <p className="text-xs text-blue-400 mt-1">{t('processingReceipt')}</p>}
+                </div>
+                {error && <p className="text-sm text-red-400 text-center mt-2">{error}</p>}
+                <div className="pt-2">
+                    <button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-md hover:shadow-lg disabled:bg-gray-500" disabled={!selectedCardId || !amount}>
+                        {t('submit')}
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
+export default TransactionForm;

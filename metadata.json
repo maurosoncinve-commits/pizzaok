@@ -1,0 +1,7 @@
+{
+  "name": "Pizza 'N Gooo Loyalty System",
+  "description": "A bilingual digital loyalty card management system for Pizza 'N Gooo staff. It allows for customer registration, card generation (VIP & Fidelity), transaction recording, and data management with a dark, elegant UI.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
