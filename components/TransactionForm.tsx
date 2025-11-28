@@ -262,9 +262,9 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
                             required 
                             className="w-full bg-gray-700 border border-gray-600 rounded-l-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500"
                         />
-                         <button type="button" onClick={handleStartScanning} className="bg-gray-600 hover:bg-gray-500 p-2.5 rounded-r-md border border-l-0 border-gray-600">
+                         <button type="button" onClick={handleStartScanning} className="bg-gray-600 hover:bg-gray-500 p-2.5 rounded-r-md border border-l-0 border-gray-600 flex items-center gap-2 pr-3">
                             <CameraIcon className="h-5 w-5 text-white" />
-                            <span className="sr-only">{t('scanQRCode')}</span>
+                            <span className="text-xs text-yellow-400 font-bold whitespace-nowrap hidden sm:inline">{t('scanCardPrompt')}</span>
                         </button>
                     </div>
                    
@@ -298,11 +298,14 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
                         <button 
                             type="button" 
                             onClick={handleReceiptScanClick}
-                            className={`flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors flex items-center gap-2 ${isScanningReceipt ? 'opacity-50 cursor-wait' : ''}`}
+                            className={`flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition-colors flex items-center gap-2 ${isScanningReceipt ? 'opacity-50 cursor-wait' : ''}`}
                             disabled={isScanningReceipt}
                         >
                             <CameraIcon className="w-5 h-5" />
-                            <span className="hidden sm:inline">{t('camera')}</span>
+                            <div className="flex flex-col items-start leading-tight">
+                                <span className="text-xs font-normal opacity-80">{t('camera')}</span>
+                                <span className="text-xs text-yellow-300 font-bold whitespace-nowrap">{t('scanBillPrompt')}</span>
+                            </div>
                         </button>
                         <input 
                             type="file" 

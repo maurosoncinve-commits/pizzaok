@@ -152,7 +152,9 @@ export const translations = {
     noBirthdays: "No birthdays this week.",
     noDormant: "No dormant customers found.",
     totalSales: "Total Sales",
-    last7Days: "Last 7 Days"
+    last7Days: "Last 7 Days",
+    scanCardPrompt: "scan card qrcode",
+    scanBillPrompt: "scan the bill"
   },
   id: {
     appName: "Loyalitas Pizza 'N Gooo",
@@ -304,6 +306,8 @@ export const translations = {
     noBirthdays: "Tidak ada ulang tahun minggu ini.",
     noDormant: "Tidak ada pelanggan tidur.",
     totalSales: "Total Penjualan",
-    last7Days: "7 Hari Terakhir"
+    last7Days: "7 Hari Terakhir",
+    scanCardPrompt: "scan card qrcode",
+    scanBillPrompt: "scan the bill"
   }
 };
