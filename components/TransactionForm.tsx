@@ -245,9 +245,11 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
             )}
             
             <form onSubmit={handleSubmit} className={`space-y-4 ${isScanning ? 'hidden' : 'block'}`}>
+                
+                {/* Search / Scan Card Row */}
                 <div ref={wrapperRef} className="relative">
                     <label htmlFor="cardId" className="block text-sm font-medium text-gray-300 mb-1">{t('searchByNameOrCardId')}</label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 h-12">
                         <input 
                             type="text" 
                             id="cardId" 
@@ -261,15 +263,15 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
                             autoComplete="off"
                             required 
                             placeholder="Enter name or ID"
-                            className="flex-grow bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500"
+                            className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500 h-full"
                         />
                          <button 
                             type="button" 
                             onClick={handleStartScanning} 
-                            className="bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white p-2 rounded-md transition-colors flex items-center justify-center gap-2 min-w-[120px]"
+                            className="bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white px-3 rounded-md transition-colors flex items-center justify-center gap-2 w-16 h-full"
+                            title={t('scanCardPrompt')}
                         >
-                            <CameraIcon className="h-5 w-5" />
-                            <span className="text-xs font-bold">{t('scanCardPrompt')}</span>
+                            <CameraIcon className="h-6 w-6" />
                         </button>
                     </div>
                    
@@ -288,9 +290,11 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
                         </ul>
                     )}
                 </div>
+
+                {/* Amount / Scan Bill Row */}
                 <div>
                     <label htmlFor="amount" className="block text-sm font-medium text-gray-300 mb-1">{t('transactionAmount')}</label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 h-12">
                         <input 
                             type="text" 
                             id="amount" 
@@ -298,16 +302,16 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
                             onChange={handleAmountChange} 
                             required
                             placeholder="0"
-                            className="flex-grow bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500 font-mono text-lg"
+                            className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500 font-mono text-lg h-full"
                         />
                         <button 
                             type="button" 
                             onClick={handleReceiptScanClick}
-                            className={`bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white p-2 rounded-md transition-colors flex items-center justify-center gap-2 min-w-[120px] ${isScanningReceipt ? 'opacity-50 cursor-wait' : ''}`}
+                            className={`bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white px-3 rounded-md transition-colors flex items-center justify-center gap-2 w-16 h-full ${isScanningReceipt ? 'opacity-50 cursor-wait' : ''}`}
                             disabled={isScanningReceipt}
+                            title={t('scanBillPrompt')}
                         >
-                            <CameraIcon className="w-5 h-5" />
-                            <span className="text-xs font-bold">{t('scanBillPrompt')}</span>
+                            <CameraIcon className="w-6 h-6" />
                         </button>
                         <input 
                             type="file" 
@@ -320,9 +324,12 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ cards, customers, onA
                     </div>
                     {isScanningReceipt && <p className="text-xs text-blue-400 mt-1">{t('processingReceipt')}</p>}
                 </div>
+                
                 {error && <p className="text-sm text-red-400 text-center mt-2">{error}</p>}
+                
+                {/* Submit Row */}
                 <div className="pt-2">
-                    <button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-md hover:shadow-lg disabled:bg-gray-500" disabled={!selectedCardId || !amount}>
+                    <button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold h-12 rounded-lg transition-colors shadow-md hover:shadow-lg disabled:bg-gray-500 flex items-center justify-center" disabled={!selectedCardId || !amount}>
                         {t('submit')}
                     </button>
                 </div>

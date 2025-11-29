@@ -14,6 +14,8 @@ import HomeDashboard from './HomeDashboard';
 import VoucherGenerator from './VoucherGenerator';
 import { ChartIcon } from './icons/ChartIcon';
 import { TicketIcon } from './icons/TicketIcon';
+import { MenuIcon } from './icons/MenuIcon';
+import { CloseIcon } from './icons/CloseIcon';
 
 type View = 'home' | 'register' | 'customers' | 'transactions' | 'marketing' | 'backup';
 
@@ -28,6 +30,7 @@ const Dashboard: React.FC = () => {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | undefined>(undefined);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -272,10 +275,14 @@ const Dashboard: React.FC = () => {
     targetView: View;
     children: React.ReactNode;
     icon?: React.ReactNode;
-  }> = ({ targetView, children, icon }) => (
+    onClick?: () => void;
+  }> = ({ targetView, children, icon, onClick }) => (
     <button
-      onClick={() => setView(targetView)}
-      className={`px-3 py-2 text-xs md:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 whitespace-nowrap ${
+      onClick={() => {
+          setView(targetView);
+          if (onClick) onClick();
+      }}
+      className={`px-4 py-3 md:px-3 md:py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-3 md:gap-2 whitespace-nowrap w-full md:w-auto ${
         view === targetView
           ? 'bg-red-600 text-white shadow-md'
           : 'text-gray-300 hover:bg-gray-700 hover:text-white'
@@ -294,8 +301,10 @@ const Dashboard: React.FC = () => {
         syncStatus={syncStatus}
         showNotification={showNotification}
       />
-      <main className="container mx-auto p-4 md:p-8 pb-20">
-        <div className="mb-8 p-2 bg-gray-800/60 rounded-lg shadow-md flex flex-wrap gap-2 justify-center overflow-x-auto">
+      <main className="container mx-auto p-4 md:p-8 pb-20 relative">
+        
+        {/* Desktop Menu */}
+        <div className="hidden md:flex mb-8 p-2 bg-gray-800/60 rounded-lg shadow-md flex-wrap gap-2 justify-center overflow-x-auto">
             <NavButton targetView="home" icon={<ChartIcon className="w-4 h-4"/>}>{t('dashboard')}</NavButton>
             <NavButton targetView="register">{t('registerCustomer')}</NavButton>
             <NavButton targetView="customers">{t('customersAndCards')}</NavButton>
@@ -303,6 +312,36 @@ const Dashboard: React.FC = () => {
             <NavButton targetView="marketing" icon={<TicketIcon className="w-4 h-4"/>}>{t('marketing')}</NavButton>
             <NavButton targetView="backup">{t('backupExport')}</NavButton>
         </div>
+
+        {/* Mobile Menu Toggle & Title Bar */}
+        <div className="md:hidden flex justify-between items-center mb-6 bg-gray-800 p-4 rounded-lg shadow">
+            <h2 className="text-xl font-bold text-white uppercase tracking-wide">
+                {view === 'home' ? t('dashboard') : 
+                 view === 'register' ? t('registerCustomer') :
+                 view === 'customers' ? t('customersAndCards') :
+                 view === 'transactions' ? t('transactions') :
+                 view === 'marketing' ? t('marketing') :
+                 t('backupExport')}
+            </h2>
+            <button 
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+                className="text-white p-2 rounded hover:bg-gray-700 transition-colors"
+            >
+                {isMobileMenuOpen ? <CloseIcon className="w-6 h-6" /> : <MenuIcon className="w-6 h-6" />}
+            </button>
+        </div>
+
+        {/* Mobile Menu Dropdown */}
+        {isMobileMenuOpen && (
+            <div className="md:hidden absolute top-20 right-4 left-4 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl z-50 p-2 flex flex-col gap-1 animate-fade-in">
+                <NavButton targetView="home" icon={<ChartIcon className="w-5 h-5"/>} onClick={() => setIsMobileMenuOpen(false)}>{t('dashboard')}</NavButton>
+                <NavButton targetView="register" onClick={() => setIsMobileMenuOpen(false)}>{t('registerCustomer')}</NavButton>
+                <NavButton targetView="customers" onClick={() => setIsMobileMenuOpen(false)}>{t('customersAndCards')}</NavButton>
+                <NavButton targetView="transactions" onClick={() => setIsMobileMenuOpen(false)}>{t('transactions')}</NavButton>
+                <NavButton targetView="marketing" icon={<TicketIcon className="w-5 h-5"/>} onClick={() => setIsMobileMenuOpen(false)}>{t('marketing')}</NavButton>
+                <NavButton targetView="backup" onClick={() => setIsMobileMenuOpen(false)}>{t('backupExport')}</NavButton>
+            </div>
+        )}
         
         {notification && (
             <div className="fixed top-24 right-8 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg animate-fade-in-out z-50">
@@ -310,7 +349,10 @@ const Dashboard: React.FC = () => {
             </div>
         )}
 
-        {renderView()}
+        {/* Content Area */}
+        <div className={isMobileMenuOpen ? 'opacity-20 pointer-events-none' : ''}>
+            {renderView()}
+        </div>
       </main>
 
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
@@ -325,6 +367,13 @@ const Dashboard: React.FC = () => {
             10% { opacity: 1; transform: translateY(0); }
             90% { opacity: 1; transform: translateY(0); }
             100% { opacity: 0; transform: translateY(-20px); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.2s ease-out forwards;
         }
       `}</style>
     </>
